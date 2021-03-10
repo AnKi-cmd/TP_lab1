@@ -162,6 +162,12 @@ class Shop():
         value = self.get_from_list(name)
         return self.weight_prod.list_of_products[value]["Количество"]
 
+    def get_shop_product_list(self):
+        shop_product_list = list()
+        for mes in self.weight_prod.list_of_products.keys():
+            shop_product_list.append(mes)
+        return shop_product_list
+
     def get_from_list(self, name):
         value = str(name)
         value = value[2:-2]
@@ -188,97 +194,96 @@ class Shop():
 
 
 class Customer():
-    __fio = "Кислицын Андрей Дмитриевич"
-    __bonus_coins = 100
-    __balance = 1000
-    __list_to_buy = {}
+    fio = "Кислицын Андрей Дмитриевич"
+    bonus_coins = 100
+    balance = 1000
+    list_to_buy = {}
 
     def set_fio(self, FIO):
         if FIO != "":
-            self.__fio = FIO
+            self.fio = FIO
 
     def set_bonus_coins(self, bon_coins):
         if bon_coins.isdigit():
             if int(bon_coins) >= 0:
-                self.__bonus_coins = int(bon_coins)
+                self.bonus_coins = int(bon_coins)
 
     def set_balance(self, cash):
         if cash.isdigit():
             if (int(cash) >= 0):
-                self.__balance = int(cash)
-
-    def get_shop_product_list(self, shop):  # ИЗМЕНИЛ
-        shop_product_list = list()
-        for mes in shop.weight_prod.list_of_products.keys():  # self.weight_prod.list_of_products.keys():
-            shop_product_list.append(mes)
-        return shop_product_list
+                self.balance = int(cash)
 
     def get_buy_list(self):
         products_to_buy = list()
-        for mes in self.__list_to_buy.keys():
+        for mes in self.list_to_buy.keys():
             products_to_buy.append(mes)
         return products_to_buy
 
     def add_to_buylist(self, name, amount):
         try:
             if name != "":
-                example = self.__list_to_buy[name]
+                example = self.list_to_buy[name]
                 sg.popup_error("Такой продукт уже есть в списке")
             else:
                 sg.popup_error("Не введено наименование товара")
         except:
-            self.__list_to_buy[str(name)] = amount
-            print(self.__list_to_buy)
+            self.list_to_buy[str(name)] = amount
+            print(self.list_to_buy)
 
     def delete_from_list(self, name):
-        del self.__list_to_buy[str(name)]
-
-    def get_buy_summ(self, shop):  # ИЗМЕНИЛ
-        summ = 0
-        for mes in self.__list_to_buy.keys():
-            summ += shop.weight_prod.list_of_products[mes]['Цена'] * self.__list_to_buy[mes]
-        return round(summ, 2)
-
-    def pay_for_products(self, payment_way, shop):  # ИЗМЕНИЛ
-        printed = False
-        if payment_way == "Наличка":
-            all_cash = self.__balance
-        elif payment_way == "Бонусы":
-            all_cash = self.__bonus_coins
-        else:
-            all_cash = self.__balance + self.__bonus_coins
-        print("У вас с собой " + str(all_cash))
-        while (self.get_buy_summ(shop) > all_cash):
-            if printed == False:
-                print("Недостаточно денег. Убираем товары из корзины")
-                printed = True
-            for mes in self.__list_to_buy.keys():
-                print("Удален продукт " + str(mes))
-                if (re.search("_Уп", mes)) and (self.__list_to_buy[mes] > 1):
-                    self.__list_to_buy[mes] -= 1
-                else:
-                    self.delete_from_list(mes)
-                break
-        print("\nЧЕК:")
-        for mes in self.__list_to_buy.keys():
-            amount = self.__list_to_buy[mes]
-            cost = shop.weight_prod.list_of_products[mes]['Цена']  # ИЗМЕНИЛ
-            print(str(mes) + "  " + str(amount) + " * " + str(cost) + " = " + str(round(amount * cost, 2)))
-        print("\nИТОГО: " + str(round(self.get_buy_summ(shop), 2)) + " рублей")
-        # time.sleep(20)
+        del self.list_to_buy[str(name)]
 
     def __init__(self, FIO, bon_coins, cash):
         self.set_fio(FIO)
         self.set_bonus_coins(bon_coins)
         self.set_balance(cash)
-        if (self.__balance == 0) and (self.__bonus_coins == 0):
+        if (self.balance == 0) and (self.bonus_coins == 0):
             sg.popup_error("Нет бонусных баллов и наличных. Продолжение работы программы не имеет смысла.")
             sys.exit()
 
     def __str__(self):
-        info = "ФИО: " + self.__fio + "\nКол-во бонусов = " + str(self.__bonus_coins) + "\nБаланс: " + str(
-            self.__balance)
+        info = "ФИО: " + self.fio + "\nКол-во бонусов = " + str(self.bonus_coins) + "\nБаланс: " + str(
+            self.balance)
         return info
+
+class Shop_and_customer_interaction():
+    def __init__(self, customer, shop):
+        self.customer = customer
+        self.shop = shop
+
+    def get_buy_summ(self):
+        summ = 0
+        key = self.customer.list_to_buy.keys()
+        for mes in self.customer.list_to_buy.keys():
+            summ += self.shop.weight_prod.list_of_products[mes]['Цена'] * self.customer.list_to_buy[mes]
+        return round(summ, 2)
+
+    def pay_for_products(self, payment_way):
+        printed = False
+        if payment_way == "Наличка":
+            all_cash = self.customer.balance
+        elif payment_way == "Бонусы":
+            all_cash = self.customer.bonus_coins
+        else:
+            all_cash = self.customer.balance + self.customer.bonus_coins
+        print("У вас с собой " + str(all_cash))
+        while (self.get_buy_summ() > all_cash):
+            if printed == False:
+                print("Недостаточно денег. Убираем товары из корзины")
+                printed = True
+            for mes in self.customer.list_to_buy.keys():
+                print("Удален продукт " + str(mes))
+                if (re.search("_Уп", mes)) and (self.customer.list_to_buy[mes] > 1):
+                    self.customer.list_to_buy[mes] -= 1
+                else:
+                    self.customer.delete_from_list(mes)
+                break
+        print("\nЧЕК:")
+        for mes in self.customer.list_to_buy.keys():
+            amount = self.customer.list_to_buy[mes]
+            cost = self.shop.weight_prod.list_of_products[mes]['Цена']
+            print(str(mes) + "  " + str(amount) + " * " + str(cost) + " = " + str(round(amount * cost, 2)))
+        print("\nИТОГО: " + str(round(self.get_buy_summ(), 2)) + " рублей")
 
 
 def set_window(title_text, menu_name):
@@ -297,6 +302,7 @@ def main():
         window.close()
         person = Customer(values['FIO'], values['bonus_coins'], values['balance'])
         shop = Shop()
+        interaction = Shop_and_customer_interaction(person, shop)
         window = set_window('Ввод данных по весовым продуктам', input_weight_products)
         while (True):
             event, values = window.read()
@@ -334,7 +340,7 @@ def main():
         while (True):
             window = set_window("Основное меню", create_main_menu())
             spisok = person.get_buy_list()
-            buys_now = person.get_buy_summ(shop)
+            buys_now = interaction.get_buy_summ()
             window['main_menu_box'].Update(values=spisok)
             window['Summ_Text'].Update("В корзине товаров на " + str(buys_now) + " рублей")
             event, values = window.read()
@@ -343,13 +349,12 @@ def main():
             if event == "Select_product":
                 window.close()
                 window = set_window("Выбор товаров", create_product_list())
-                spisok = person.get_shop_product_list(shop)
+                spisok = shop.get_shop_product_list()
                 window['Spisok'].Update(values=spisok)
                 while (True):
                     event, values = window.read()
                     if event in (None, 'Exit', 'Cancel'):
                         sys.exit()
-                    # print(values)
                     if (event == "Add_product") and (values['Spisok'] != []):
                         window.close()
                         window = set_window("Выбор количества", create_choose_value())
@@ -379,119 +384,13 @@ def main():
                     return 0
                 window.close()
                 window = set_window("Итог", pay_menu)
-                person.pay_for_products(event, shop)
+                interaction.pay_for_products(event)
                 event, values = window.read()
                 return 0
-                # if event == "END":
-                #     return 0
             elif event == "Delete":
                 now_name = shop.get_from_list(values['main_menu_box'])
                 if now_name != "":
                     person.delete_from_list(now_name)
                 window.close()
 
-
 main()
-
-# def main():
-#     global iterator
-#     window = set_window('Ввод данных', input_info)
-#     event, values = window.read()
-#     if event in (None, 'Exit', 'Cancel'):
-#         sys.exit()
-#     if event == "Confirm":
-#         window.close()
-#         person = Customer(values['FIO'], values['bonus_coins'], values['balance'])
-#         window = set_window('Ввод данных по весовым продуктам', input_weight_products)
-#         while (True):
-#             event, values = window.read()
-#             if event == "Add_Product":
-#                 if person.check_exist_weight_product(values['product_name']) == 0:
-#                     person.add_weight_products(values['product_name'], values['cost'], values['amount'])
-#                 else:
-#                     sg.popup_error("Такой продукт уже есть в списке")
-#                 window['product_name'].Update("")
-#                 window['cost'].Update("")
-#                 window['amount'].Update("")
-#             if event == "End_Adding":
-#                 window.close()
-#                 break
-#         window = set_window('Ввод данных по поштучным продуктам', input_perpiece_products)
-#         while (True):
-#             event, values = window.read()
-#             if event == "Add_Product":
-#                 if person.check_exist_perpiece_product(values['product_name']) == 0:
-#                     person.add_perpiece_products(values['product_name'], values['cost'], values['amount'])
-#                 else:
-#                     sg.popup_error("Такой продукт уже есть в списке")
-#                 window['product_name'].Update("")
-#                 window['cost'].Update("")
-#                 window['amount'].Update("")
-#             if event == "End_Adding":
-#                 window.close()
-#                 list_exist = person.check_exist_list()
-#                 if list_exist == 1:
-#                     person.add_perpiece_products("Молоко", "65", "20")
-#                     person.add_weight_products("Творог", "300", "10")
-#                     person.add_weight_products("Мясо", "400", "10")
-#                     person.add_perpiece_products("Пельмени", "200", "20")
-#                 break
-#         while (True):
-#             window = set_window("Основное меню", create_main_menu())
-#             spisok = person.get_buy_list()
-#             buys_now = person.get_buy_summ()
-#             window['main_menu_box'].Update(values=spisok)
-#             window['Summ_Text'].Update("В корзине товаров на " + str(buys_now) + " рублей")
-#             event, values = window.read()
-#             if event in (None, 'Exit', 'Cancel'):
-#                 sys.exit()
-#             if event == "Select_product":
-#                 window.close()
-#                 window = set_window("Выбор товаров", create_product_list())
-#                 spisok = person.get_shop_product_list()
-#                 window['Spisok'].Update(values=spisok)
-#                 while(True):
-#                     event, values = window.read()
-#                     if event in (None, 'Exit', 'Cancel'):
-#                         sys.exit()
-#                     #print(values)
-#                     if (event == "Add_product") and (values['Spisok'] != []):
-#                         window.close()
-#                         window = set_window("Выбор количества", create_choose_value())
-#                         num = person.get_amount_of_product(values['Spisok'])
-#                         now_name = person.get_from_list(values['Spisok'])
-#                         if re.search("_Вес", str(values['Spisok'])):
-#                             num = num * 1000
-#                             window['Edit_text'].Update("Выберите количество товара (граммы)")
-#                         window['Slid'].Update(range=(1, num))
-#                         event, values = window.read()
-#                         if event in (None, 'Exit', 'Cancel'):
-#                             sys.exit()
-#                         if event == "Confirm":
-#                             amount = values['Slid']
-#                             amount = float(amount)
-#                             if num > 1000:
-#                                 amount /= 1000
-#                             person.add_to_buylist(now_name, amount)
-#                             window.close()
-#                             break
-#
-#             elif event == "Pay":
-#                 window.close()
-#                 window = set_window("Выбор оплаты", select_payment)
-#                 event, values = window.read()
-#                 if event in (None, 'Exit', 'Cancel'):
-#                     return 0
-#                 window.close()
-#                 window = set_window("Итог", pay_menu)
-#                 person.pay_for_products(event)
-#                 event, values = window.read()
-#                 return 0
-#                 # if event == "END":
-#                 #     return 0
-#
-#             elif event == "Delete":
-#                 now_name = person.get_from_list(values['main_menu_box'])
-#                 if now_name != "":
-#                     person.delete_from_list(now_name)
-#                 window.close()
